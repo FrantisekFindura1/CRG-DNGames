@@ -5,6 +5,7 @@ import java.util.Iterator;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -36,10 +37,15 @@ public class DinoGame extends ApplicationAdapter {
    boolean highestPointReached = false;
    Random rand = new Random();
    private int score;
+   private int highScore;
 private String vypisScore;
-BitmapFont yourBitmapFontName;
+private String deathScreenText;
+private String vypisHighScore;
+BitmapFont scoreFont;
+BitmapFont deathScreenFont;
 int obstacleSpeed = 300;
 int timeToSpeed = 2000;
+boolean isDead = false;
   
 
    @Override
@@ -47,10 +53,15 @@ int timeToSpeed = 2000;
       cactusObstacleImage = new Texture(Gdx.files.internal("cactus.png"));
       birdObstacleImage = new Texture(Gdx.files.internal("birdObstacle.png"));
       dinoImage = new Texture(Gdx.files.internal("dino.png"));
-
+      
+     
       score = 0;
     vypisScore = "score: 0";
-    yourBitmapFontName = new BitmapFont();
+    vypisHighScore = "hi-score: 0";
+    deathScreenText = "       GAME OVER \npress spacebar to retry ";
+    
+    scoreFont = new BitmapFont();
+    deathScreenFont = new BitmapFont();
 
       camera = new OrthographicCamera();
       camera.setToOrtho(false, 800, 480);
@@ -68,14 +79,11 @@ int timeToSpeed = 2000;
    }
 
    private void spawnBirdObstacle() {
-       
       Rectangle bird = new Rectangle();
-
           bird.y = 220;
           bird.x = 800 - 64;
       bird.width = 64;
-      bird.height = 64;
-    
+      bird.height = 48;
       birdObstacles.add(bird); 
       lastObstacleSpawnTime = TimeUtils.millis();
    }
@@ -84,17 +92,34 @@ int timeToSpeed = 2000;
       Rectangle cactus = new Rectangle();
        cactus.y = 20;
            cactus.x = 800 - 64;
-      cactus.width = 64;
-      cactus.height = 64;
+      cactus.width = 48;
+      cactus.height = 65;
       cactusObstacles.add(cactus);
       lastObstacleSpawnTime = TimeUtils.millis();
    }
    
-  
+   private void resetOnDeath(){
+        isDead = false;
+        score = 0;
+        dino.y=20;
+        obstacleSpeed = 300;
+        timeToSpeed = 2000;
+        
+            for (Iterator<Rectangle> birdIter = birdObstacles.iterator(); birdIter.hasNext(); ) {   //vymaze vsetky kaktusy a vtaky ked stlacim medzernik
+         Rectangle bird = birdIter.next();
+         if(bird.x > 0) birdIter.remove();
+             }
+                  
+             for (Iterator<Rectangle> iter = cactusObstacles.iterator(); iter.hasNext(); ) {
+         Rectangle cactus = iter.next();
+         if(cactus.x >0) iter.remove();
+             }
+   }
 
    @Override
    public void render() {
-      ScreenUtils.clear(0, 0, 0.2f, 1);
+      ScreenUtils.clear(1, 1, 1, 1);
+      Preferences prefs = Gdx.app.getPreferences("My Preferences");
       
       camera.update();
 
@@ -102,21 +127,36 @@ int timeToSpeed = 2000;
 
       batch.begin();
       
-      yourBitmapFontName.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-yourBitmapFontName.draw(batch, vypisScore, 10, 470);
-
-      batch.draw(dinoImage, dino.x, dino.y);
+      scoreFont.setColor(0f, 0f, 0f, 1.0f);
+      deathScreenFont.setColor(0f, 0f, 0f, 1.0f);
+      deathScreenFont.getData().setScale(2);
       
+scoreFont.draw(batch, vypisScore, 10, 470);
+scoreFont.draw(batch, vypisHighScore, 700, 470);
+
+if(isDead){
+deathScreenFont.draw(batch, deathScreenText, 250, 250);
+}
+      Sprite dinoSize = new Sprite(dinoImage);
+      dinoSize.setScale(1f);
+      dinoSize.setPosition(dino.x, dino.y);
+      dinoSize.setSize(dino.width, dino.height);
+      dinoSize.draw(batch);
       
 
 for(Rectangle cactus: cactusObstacles) {
-         batch.draw(cactusObstacleImage, cactus.x, cactus.y);
-}
+         Sprite cactusSize = new Sprite(cactusObstacleImage);
+          cactusSize.setScale(1f);
+      cactusSize.setPosition(cactus.x, cactus.y);
+      cactusSize.setSize(cactus.width, cactus.height);
+      cactusSize.draw(batch);
+      }
+
      
       for(Rectangle bird: birdObstacles) {
          
       Sprite birdSize = new Sprite(birdObstacleImage);
-      birdSize.setScale(0.8f);
+      birdSize.setScale(1f);
       birdSize.setPosition(bird.x, bird.y);
       birdSize.setSize(bird.width, bird.height);
       birdSize.draw(batch);
@@ -124,7 +164,7 @@ for(Rectangle cactus: cactusObstacles) {
       
       batch.end();
      
-      if(!highestPointReached){
+      if(!highestPointReached && !isDead){
       if(Gdx.input.isKeyPressed(Keys.UP) && dino.y <= 20){ 
           velocity = -15;
       }
@@ -143,7 +183,10 @@ for(Rectangle cactus: cactusObstacles) {
           highestPointReached = true;
       }
       }
-      
+      else if(isDead){
+          velocity = 0; 
+          dino.y = dino.y-velocity;
+      }
       if(highestPointReached){
           if(dino.y < 20){
           velocity = 15;
@@ -160,6 +203,8 @@ for(Rectangle cactus: cactusObstacles) {
       if(dino.x < 0) dino.x = 0;
       if(dino.y > 480) dino.y = 480 - 80;
       
+      
+      if(!isDead){
  if(obstacleSpeed <1200){
       if(TimeUtils.millis() - lastObstacleSpawnTime > timeToSpeed){
           int randomObstacleSpawn = rand.nextInt(2);
@@ -185,16 +230,24 @@ for(Rectangle cactus: cactusObstacles) {
           
       }
    }
- 
-  score++;
+ score++;
   vypisScore = "score: " + score;
+  highScore = prefs.getInteger("highscore");
+  if(highScore < score){
+      highScore = score;
+      prefs.putInteger("highscore", highScore);
+            prefs.flush();
+  }
+  vypisHighScore = "hi-score: " + highScore;
+      
       
       for (Iterator<Rectangle> iter = cactusObstacles.iterator(); iter.hasNext(); ) {
          Rectangle cactus = iter.next();
          cactus.x -= obstacleSpeed * Gdx.graphics.getDeltaTime();
          if(cactus.x < 0 - 80) iter.remove();
-         if(cactus.overlaps(dino)) {
-            iter.remove();  
+         if(cactus.overlaps(dino)) { 
+            isDead = true;
+            
          }
       }
    
@@ -202,14 +255,20 @@ for(Rectangle cactus: cactusObstacles) {
          Rectangle bird = birdIter.next();
          bird.x -= obstacleSpeed * Gdx.graphics.getDeltaTime();
          if(bird.x < 0 - 80) birdIter.remove();
-         if(bird.overlaps(dino)) {
-            birdIter.remove();  
+         if(bird.overlaps(dino)) {  
+            isDead = true;
          }
-         
-         
       }
+          
    }
-
+         if(isDead){
+             if(Gdx.input.isKeyPressed(Keys.SPACE)){
+                resetOnDeath();
+             }
+        }
+         
+   }
+   
    @Override
    public void dispose() {
       // dispose of all the native resources
