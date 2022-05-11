@@ -6,17 +6,15 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Preferences;
-import com.badlogic.gdx.audio.Music;
-import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -46,6 +44,8 @@ BitmapFont deathScreenFont;
 int obstacleSpeed = 300;
 int timeToSpeed = 2000;
 boolean isDead = false;
+
+
   
 
    @Override
@@ -110,21 +110,27 @@ boolean isDead = false;
          if(bird.x > 0) birdIter.remove();
              }
                   
-             for (Iterator<Rectangle> iter = cactusObstacles.iterator(); iter.hasNext(); ) {
-         Rectangle cactus = iter.next();
-         if(cactus.x >0) iter.remove();
+             for (Iterator<Rectangle> cactusIter = cactusObstacles.iterator(); cactusIter.hasNext(); ) {
+         Rectangle cactus = cactusIter.next();
+         if(cactus.x >0) cactusIter.remove();
              }
    }
 
    @Override
    public void render() {
-      ScreenUtils.clear(1, 1, 1, 1);
+      ScreenUtils.clear(1.0f, 1.0f, 1.0f, 1f);
       Preferences prefs = Gdx.app.getPreferences("My Preferences");
       
       camera.update();
 
       batch.setProjectionMatrix(camera.combined); 
-
+      
+ShapeRenderer zem = new ShapeRenderer();
+      zem.setColor(Color.BLACK);
+      zem.begin(ShapeType.Line); 
+      zem.line(0, 30, 860, 30); 
+      zem.end();
+      
       batch.begin();
       
       scoreFont.setColor(0f, 0f, 0f, 1.0f);
@@ -163,16 +169,16 @@ for(Rectangle cactus: cactusObstacles) {
       }
       
       batch.end();
+       
      
       if(!highestPointReached && !isDead){
-      if(Gdx.input.isKeyPressed(Keys.UP) && dino.y <= 20){ 
+      if(Gdx.input.isKeyPressed(Keys.UP) && dino.y <= 20 && !Gdx.input.isKeyPressed(Keys.DOWN)){ 
           velocity = -15;
       }
-       if(Gdx.input.isKeyPressed(Keys.DOWN) && dino.y >50){ 
+       if(Gdx.input.isKeyPressed(Keys.DOWN) && dino.y >50 && !Gdx.input.isKeyPressed(Keys.UP)){ 
           velocity = 15;
       }
       if(dino.y < 20){
-          velocity = 0;
           dino.y = 20;
       }
       else{
@@ -182,10 +188,6 @@ for(Rectangle cactus: cactusObstacles) {
       if(dino.y > 220){
           highestPointReached = true;
       }
-      }
-      else if(isDead){
-          velocity = 0; 
-          dino.y = dino.y-velocity;
       }
       if(highestPointReached){
           if(dino.y < 20){
@@ -201,11 +203,11 @@ for(Rectangle cactus: cactusObstacles) {
       }
 
       if(dino.x < 0) dino.x = 0;
-      if(dino.y > 480) dino.y = 480 - 80;
+      if(dino.y < 20) dino.y = 20;
       
       
       if(!isDead){
- if(obstacleSpeed <1200){
+
       if(TimeUtils.millis() - lastObstacleSpawnTime > timeToSpeed){
           int randomObstacleSpawn = rand.nextInt(2);
           if(randomObstacleSpawn == 0){
@@ -214,22 +216,13 @@ for(Rectangle cactus: cactusObstacles) {
           else if(randomObstacleSpawn == 1){
               spawnBirdObstacle();
           }
+           if(obstacleSpeed <1250){
           obstacleSpeed+=20;
           timeToSpeed -= 30;
+           }
       }
-   }
-  else{
-      if(TimeUtils.millis() - lastObstacleSpawnTime > timeToSpeed){
-         int randomObstacleSpawn = rand.nextInt(2);
-          if(randomObstacleSpawn == 0){
-          spawnCactusObstacle();
-          }
-          else if(randomObstacleSpawn == 1){
-              spawnBirdObstacle();
-          }
-          
-      }
-   }
+   
+  
  score++;
   vypisScore = "score: " + score;
   highScore = prefs.getInteger("highscore");
@@ -261,8 +254,8 @@ for(Rectangle cactus: cactusObstacles) {
       }
           
    }
-         if(isDead){
-             if(Gdx.input.isKeyPressed(Keys.SPACE)){
+ else{
+    if(Gdx.input.isKeyPressed(Keys.SPACE)){
                 resetOnDeath();
              }
         }
